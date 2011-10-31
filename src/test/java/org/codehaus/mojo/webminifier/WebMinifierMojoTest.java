@@ -20,11 +20,11 @@ package org.codehaus.mojo.webminifier;
  */
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URISyntaxException;
 import java.util.Collection;
-import java.util.Iterator;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -97,9 +97,13 @@ public class WebMinifierMojoTest
                                                       new String[] { "html", "js" }, true );
 
         assertEquals( 3, files.size() );
-        Iterator<File> iter = files.iterator();
-        assertEquals( "1.min.js", iter.next().getName() );
-        assertEquals( "a.html", iter.next().getName() );
-        assertEquals( "d.js", iter.next().getName() );
+        for ( File file : files )
+        {
+            String fileName = file.getName();
+            if ( !fileName.equals( "1.min.js" ) && !fileName.equals( "a.html" ) && !fileName.equals( "d.js" ) )
+            {
+                fail( "Unexpected filename: " + fileName );
+            }
+        }
     }
 }

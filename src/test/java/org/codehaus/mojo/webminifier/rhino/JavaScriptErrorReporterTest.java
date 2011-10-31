@@ -1,4 +1,4 @@
-package org.codehaus.mojo.webminifier.yui;
+package org.codehaus.mojo.webminifier.rhino;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -25,7 +25,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.apache.maven.plugin.logging.Log;
-import org.codehaus.mojo.webminifier.rhino.RhinoExceptionReporter;
 import org.junit.Before;
 import org.junit.Test;
 import org.mozilla.javascript.EvaluatorException;
