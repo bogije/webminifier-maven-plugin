@@ -49,9 +49,9 @@
 		</developer>
 	</developers>
 	<scm>
-		<connection>scm:svn:http://svn.codehaus.org/mojo/trunk/sandbox/webminifier-plugin</connection>
-		<developerConnection>scm:svn:https://svn.codehaus.org/mojo/trunk/sandbox/webminifier-plugin</developerConnection>
-		<url>http://svn.codehaus.org/mojo/trunk/sandbox/webminifier-plugin</url>
+		<connection>scm:svn:http://svn.codehaus.org/mojo/trunk/sandbox/webminifier-maven-plugin</connection>
+		<developerConnection>scm:svn:https://svn.codehaus.org/mojo/trunk/sandbox/webminifier-maven-plugin</developerConnection>
+		<url>http://svn.codehaus.org/mojo/trunk/sandbox/webminifier-maven-plugin</url>
 	</scm>
 
 	<properties>
