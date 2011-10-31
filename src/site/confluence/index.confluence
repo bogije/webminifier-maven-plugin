@@ -36,9 +36,9 @@ For example, if a HTML file contains the following script references:
 - e.js
 
 By default, these would all be merged into a new file 1.js and your HTML script references replaced by a single one, like:
-- 1.js (containing a.js, b.js, c.js, d.js and e.js)
+- 1.min.js (containing a.js, b.js, c.js, d.js and e.js)
 
 If you configured a JavaScript split point of 'c.js', the HTML file could then contain the following script references:
-- 1.js (containing a.js, b.js and c.js)
-- 2.js (containing d.js and e.js)
+- 1.min.js (containing a.js, b.js and c.js)
+- 2.min.js (containing d.js and e.js)
 
