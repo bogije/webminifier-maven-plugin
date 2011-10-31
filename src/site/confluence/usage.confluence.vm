@@ -41,27 +41,13 @@ Configuration options can be passed to the plugin using a {{configuration}} sect
         <artifactId>webminifier-maven-plugin</artifactId>
         ...
         <configuration>
+          <jsCompressorType>YUI</jsCompressorType>
           <jsSplitPoints>framework.js</jsSplitPoints>
           <yuiJSObfuscate>false</yuiJSObfuscate>
         </configuration>
       </plugin>
     ...
 {code}
-
-A list of all configuration options follows:
-
-||Configuration Option||Required||Default Value||Description||
-|sourceFolder|Y|target/classes|The folder to copy and apply minification to|
-|destinationFolder|Y|target/min/classes|The folder to save the minified version of the files to|
-|htmlFiles|Y|\*\*/\*.htm,\*\*/\*.html|Attempt to minify resources linked to from HTML files matching this filename pattern|
-|jsSplitPoints|N| |Files matching a filename pattern supplied here will be used as JavaScript split points|
-|cssSplitPoints|N| |Files matching a filename pattern supplied here will be used as CSS split points|
-
-The following are options specific to the YUI compressor:
-||Configuration Option||Required||Default Value||Description||
-|yuiJSObfuscate|N|true|Obfuscate as well as minify the JavaScript files|
-|yuiJSPreserveSemicolons|N|false|Preserve all semicolons|
-|yuiJSDisableOptimizations|N|false|Disable all micro optimizations|
 
 h2. Example
 
@@ -116,16 +102,16 @@ With the following references in the file target/min/classes/app.html:
 You'd see the following files in target/min/classes after minification:
 
 - app.html
-- 1.js (containing utilities.js and framework.js)
-- 2.js (containing ui.js and application.js)
-- 1.css (containing framework.css, ui.css and application.css)
+- 1.min.js (containing utilities.js and framework.js)
+- 2.min.js (containing ui.js and application.js)
+- 1.min.css (containing framework.css, ui.css and application.css)
 
 And the references in target/min/classes/app.html would be re-written like:
 
 {code}
 	...
-	<script type="text/javascript" src="1.js"></script>
-	<script type="text/javascript" src="2.js"></script>
+	<script type="text/javascript" src="1.min.js"></script>
+	<script type="text/javascript" src="2.min.js"></script>
 	...
 	<link rel="stylesheet" type="text/css" href="1.css" />
 	...

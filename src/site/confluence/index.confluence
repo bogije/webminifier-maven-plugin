@@ -1,10 +1,14 @@
 h1. Web Minifier Maven Plugin
 
+!images/zip.png|align=left!
+
+*Increase the speed of your application download by up to 3 times*
+
 h2. Overview
 
 This plugin provides JavaScript and CSS minification for Maven projects. It produces a minified version of your JavaScript and CSS resources which can be used to construct a minified final artefact. It is designed to be flexible in the way it operates to allow for easy minified resource re-use across your project.
 
-Under the hood, it currently uses the [YUI Compressor|http://developer.yahoo.com/yui/compressor/] but has a layer of abstraction around the minification tool which allows for other minification tools to potentially be used.
+Under the hood, it currently uses the [YUI Compressor|http://developer.yahoo.com/yui/compressor/] and [Closure Compiler|http://code.google.com/closure/compiler/] but has a layer of abstraction around these tools which allows for other tools to be used.
 
 h2. Default Behaviour
 
