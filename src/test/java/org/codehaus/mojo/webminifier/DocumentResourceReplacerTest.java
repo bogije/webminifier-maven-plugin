@@ -108,7 +108,7 @@ public class DocumentResourceReplacerTest
     {
         File htmlFile = File.createTempFile( "tempHtml", ".html" );
         replacer.writeHTML( htmlFile, "UTF-8" );
-        final long expectedLength = 417L;
+        final long expectedLength = 535L;
         assertEquals( expectedLength, htmlFile.length() );
         htmlFile.delete();
     }

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -39,6 +40,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.cyberneko.html.parsers.DOMParser;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -106,9 +108,6 @@ public class DocumentResourceReplacer
     /**
      * @return the html source as a string.
      * @throws TransformerException if something does wrong.
-     *             <p>
-     *             FIXME: Is there a better way to do this i.e. can we obtain an input stream from the document. May be
-     *             better from a memory perspective?
      */
     private String getHTMLSource()
         throws TransformerException
@@ -116,10 +115,34 @@ public class DocumentResourceReplacer
         // Use a Transformer for output
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
-
+        
         DOMSource source = new DOMSource( document );
         StringWriter writer = new StringWriter();
         StreamResult result = new StreamResult( writer );
+
+        DocumentType doctype = document.getDoctype();
+        if ( doctype != null )
+        {
+            boolean docTypeSet = false;
+            if ( doctype.getPublicId() != null )
+            {
+                transformer.setOutputProperty( OutputKeys.DOCTYPE_PUBLIC, doctype.getPublicId() );
+                docTypeSet = true;
+            }
+            if ( doctype.getSystemId() != null )
+            {
+                transformer.setOutputProperty( OutputKeys.DOCTYPE_SYSTEM, doctype.getSystemId() );
+                docTypeSet = false;
+            }
+            // If we know we have a doctype, but there's no id then they'll be nothing written. In this case we write
+            // out an empty doctype html in support of html that has not yet been ratified (which is as per the source
+            // document).
+            if ( !docTypeSet )
+            {
+                writer.write( "<!DOCTYPE html>" );
+            }
+        }
+
         transformer.transform( source, result );
 
         return writer.toString();

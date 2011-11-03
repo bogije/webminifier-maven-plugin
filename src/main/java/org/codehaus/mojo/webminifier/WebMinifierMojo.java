@@ -64,7 +64,7 @@ public class WebMinifierMojo
     public enum JsCompressorType
     {
         /** Types */
-        YUI, CLOSURE
+        YUI, CLOSURE, NONE
     }
 
     /**
@@ -182,7 +182,12 @@ public class WebMinifierMojo
             OutputStream os = new FileOutputStream( outputFile, true );
             try
             {
+                if ( getLog().isDebugEnabled() )
+                {
+                    getLog().debug( "Concatenating file: " + inputFile );
+                }
                 IOUtils.copy( is, os );
+                os.write( '\n' );
             }
             finally
             {
@@ -284,49 +289,58 @@ public class WebMinifierMojo
             }
 
             // Minify the concatenated JS resource files
-            Set<File> minifiedJSResources = new LinkedHashSet<File>( minifiedCounter );
-            for ( File concatenatedJSResource : concatenatedJsResources )
+            if ( jsCompressorType != JsCompressorType.NONE )
             {
-                File minifiedJSResource;
-                try
+                Set<File> minifiedJSResources = new LinkedHashSet<File>( minifiedCounter );
+                for ( File concatenatedJSResource : concatenatedJsResources )
                 {
-                    minifiedJSResource = FileUtils.toFile( //
-                    new URL( concatenatedJSResource.toURI().toString().replace( ".js", ".min.js" ) ) );
-                }
-                catch ( MalformedURLException e )
-                {
-                    throw new MojoExecutionException( "Problem determining file URL", e );
+                    File minifiedJSResource;
+                    try
+                    {
+                        minifiedJSResource = FileUtils.toFile( //
+                        new URL( concatenatedJSResource.toURI().toString().replace( ".js", ".min.js" ) ) );
+                    }
+                    catch ( MalformedURLException e )
+                    {
+                        throw new MojoExecutionException( "Problem determining file URL", e );
+                    }
+
+                    minifiedJSResources.add( minifiedJSResource );
+
+                    boolean warningsFound;
+                    try
+                    {
+                        warningsFound = minifyJSFile( concatenatedJSResource, minifiedJSResource );
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new MojoExecutionException( "Problem reading/writing JS", e );
+                    }
+
+                    logCompressionRatio( minifiedJSResource.getName(), concatenatedJSResource.length(),
+                                         minifiedJSResource.length() );
+
+                    // Delete the concatenated file *only* if there were no warnings. If there were warnings then the
+                    // user may want to manually invoke the compressor for further investigation.
+                    if ( !warningsFound )
+                    {
+                        concatenatedJSResource.delete();
+                    }
+                    else
+                    {
+                        getLog().warn( "Warnings were found. " + concatenatedJSResource
+                                           + " has been retained for your further investigations." );
+                    }
                 }
 
-                minifiedJSResources.add( minifiedJSResource );
-
-                boolean warningsFound;
-                try
-                {
-                    warningsFound = minifyJSFile( concatenatedJSResource, minifiedJSResource );
-                }
-                catch ( IOException e )
-                {
-                    throw new MojoExecutionException( "Problem reading/writing JS", e );
-                }
-                logCompressionRatio( minifiedJSResource.getName(), concatenatedJSResource.length(),
-                                     minifiedJSResource.length() );
-
-                // Delete the concatenated file *only* if there were no warnings. If there were warnings then the user
-                // may want to manually invoke the compressor for further investigation.
-                if ( !warningsFound )
-                {
-                    concatenatedJSResource.delete();
-                }
-                else
-                {
-                    getLog().warn( "Warnings were found. " + concatenatedJSResource
-                                       + " has been retained for your further investigations." );
-                }
+                // Update source references
+                replacer.replaceJSResources( targetHTML, minifiedJSResources );
             }
-
-            // Update source references
-            replacer.replaceJSResources( targetHTML, minifiedJSResources );
+            else
+            {
+                replacer.replaceJSResources( targetHTML, concatenatedJsResources );
+                getLog().info( "Concatenated resources with no compression" );
+            }
 
             // Write HTML file to output dir
             try
