@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -115,7 +116,7 @@ public class DocumentResourceReplacer
         // Use a Transformer for output
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
-        
+
         DOMSource source = new DOMSource( document );
         StringWriter writer = new StringWriter();
         StreamResult result = new StreamResult( writer );
@@ -172,15 +173,14 @@ public class DocumentResourceReplacer
             Node headElement = headElements.item( 0 );
 
             // Insert new SCRIPT elements for all replaced resources
-            String documentUri = documentDir.getParentFile().toURI().toString();
+            URI documentUri = documentDir.getParentFile().toURI();
             for ( File jsResource : jsResources )
             {
-                String jsResourceRelUri = jsResource.toURI().toString();
-                jsResourceRelUri = jsResourceRelUri.substring( documentUri.length() );
+                URI jsResourceRelUri = documentUri.relativize( jsResource.toURI() );
 
                 Element jsElement = document.createElement( "script" );
                 jsElement.setAttribute( "type", "text/javascript" );
-                jsElement.setAttribute( "src", jsResourceRelUri );
+                jsElement.setAttribute( "src", jsResourceRelUri.toString() );
                 headElement.appendChild( jsElement );
             }
         }

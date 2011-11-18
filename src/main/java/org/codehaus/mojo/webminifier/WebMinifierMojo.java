@@ -97,7 +97,7 @@ public class WebMinifierMojo
     private List<String> htmlExcludes;
 
     /**
-     * If a JavaScript resource matching one of these file names is found while minifying it will be the last script
+     * If a JavaScript resource contains one of these file names is found while minifying it will be the last script
      * file appended to the current minified script file. A new minified script will be created for the next file, if
      * one exists.
      * 
