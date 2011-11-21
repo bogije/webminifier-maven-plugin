@@ -27,10 +27,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.xml.transform.TransformerException;
@@ -97,13 +102,16 @@ public class WebMinifierMojo
     private List<String> htmlExcludes;
 
     /**
-     * If a JavaScript resource contains one of these file names is found while minifying it will be the last script
-     * file appended to the current minified script file. A new minified script will be created for the next file, if
-     * one exists.
+     * If a JavaScript resource contains one of these target/classes/js relative file names is found while minifying it
+     * will be the last script file appended to the current minified script file. A new minified script will be created
+     * for the next file, if one exists. Each name in the property corresponds to the relative file path of a file
+     * accessible from the destinationFolder e.g. js/a.js would match up with a file located at target/classes/js/a.js.
+     * Each property value, if provided, corresponds to the name component of a file that will be generated and without
+     * the file extension. If omitted then a numbering scheme will be employed to name the file at the split point.
      * 
      * @parameter
      */
-    private List<String> jsSplitPoints;
+    private Properties jsSplitPoints;
 
     /**
      * All HTML, JavaScript and CSS files are assumed to have this encoding. Ê
@@ -226,6 +234,11 @@ public class WebMinifierMojo
         // Process each HTML source file and concatenate into unminified output scripts
         int minifiedCounter = 0;
 
+        // If a split point already exists on disk then we've been through the minification process. As
+        // minification can be expensive, we would like to avoid performing it multiple times. Thus storing
+        // a set of what we've previously minified enables us.
+        Set<File> existingConcatenatedJsResources = new HashSet<File>();
+
         for ( String targetHTMLFile : getArrayOfTargetHTMLFiles() )
         {
             File targetHTML = new File( destinationFolder, targetHTMLFile );
@@ -249,49 +262,74 @@ public class WebMinifierMojo
 
             if ( jsSplitPoints == null )
             {
-                jsSplitPoints = Collections.emptyList();
+                jsSplitPoints = new Properties();
             }
-
-            Set<File> concatenatedJsResources = new LinkedHashSet<File>( jsResources.size() );
 
             File concatenatedJsResource = null;
 
+            URI destinationFolderUri = destinationFolder.toURI();
+
+            // Walk backwards through the script declarations and note what files will map to what split point.
+            Map<File, File> jsResourceTargetFiles = new HashMap<File, File>( jsResources.size() );
+            ListIterator<File> jsResourcesIter = jsResources.listIterator( jsResources.size() );
+
+            while ( jsResourcesIter.hasPrevious() )
+            {
+                File jsResource = jsResourcesIter.previous();
+
+                URI candidateSplitPointNameUri = destinationFolderUri.relativize( jsResource.toURI() );
+                String splitPointName = (String) jsSplitPoints.get( candidateSplitPointNameUri.toString() );
+
+                // If we have no name and we've not been in here before, then assign an initial name based on a number.
+                if ( splitPointName == null && concatenatedJsResource == null )
+                {
+                    concatenatedJsResource = new File( destinationFolder, //
+                                                       Integer.valueOf( ++minifiedCounter ) + ".js" );
+                }
+                else if ( splitPointName != null )
+                {
+                    // We have a new split name so use it for this file and upwards in the script statements until we
+                    // either hit another split point or there are no more script statements.
+                    concatenatedJsResource = new File( destinationFolder, splitPointName + ".js" );
+
+                    // Note that we've previously created this.
+                    if ( concatenatedJsResource.exists() )
+                    {
+                        existingConcatenatedJsResources.add( concatenatedJsResource );
+                    }
+                }
+
+                jsResourceTargetFiles.put( jsResource, concatenatedJsResource );
+            }
+
             for ( File jsResource : jsResources )
             {
-                // If split point was reached don't write any more minified
-                // scripts to the current output file
-                if ( concatenatedJsResource == null || jsSplitPoints.contains( jsResource.getName() ) )
+                concatenatedJsResource = jsResourceTargetFiles.get( jsResource );
+                if ( !existingConcatenatedJsResources.contains( concatenatedJsResource ) )
                 {
-                    // Construct file path reference to unminified concatenated JS
-                    StringBuilder concatenatedJsResourceFilePath = new StringBuilder();
-                    concatenatedJsResourceFilePath.append( destinationFolder + File.separator );
-                    concatenatedJsResourceFilePath.append( Integer.valueOf( ++minifiedCounter ) + ".js" );
+                    // Concatenate input file onto output resource file
+                    try
+                    {
+                        concatenateFile( jsResource, concatenatedJsResource );
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new MojoExecutionException( "Problem concatenating JS files", e );
+                    }
 
-                    concatenatedJsResource = new File( concatenatedJsResourceFilePath.toString() );
-
-                    concatenatedJsResources.add( concatenatedJsResource );
+                    // Finally, remove the JS resource from the target folder as it is no longer required (we've
+                    // concatenated it).
+                    jsResource.delete();
                 }
-
-                // Concatenate input file onto output resource file
-                try
-                {
-                    assert concatenatedJsResource != null;
-                    concatenateFile( jsResource, concatenatedJsResource );
-                }
-                catch ( IOException e )
-                {
-                    throw new MojoExecutionException( "Problem concatenating JS files", e );
-                }
-
-                // Finally, remove the JS resource from the target folder as it is no longer required (we've
-                // concatenated it).
-                jsResource.delete();
             }
 
             // Minify the concatenated JS resource files
+
+            Set<File> concatenatedJsResources = new HashSet<File>( jsResourceTargetFiles.values() );
+
             if ( jsCompressorType != JsCompressorType.NONE )
             {
-                Set<File> minifiedJSResources = new LinkedHashSet<File>( minifiedCounter );
+                Set<File> minifiedJSResources = new LinkedHashSet<File>( concatenatedJsResources.size() );
                 for ( File concatenatedJSResource : concatenatedJsResources )
                 {
                     File minifiedJSResource;
@@ -307,38 +345,39 @@ public class WebMinifierMojo
 
                     minifiedJSResources.add( minifiedJSResource );
 
-                    boolean warningsFound;
-                    try
+                    // If we've not actually performed the minification before... then do so. This is the expensive bit
+                    // so we like to avoid it if we can.
+                    if ( !existingConcatenatedJsResources.contains( concatenatedJsResource ) )
                     {
-                        warningsFound = minifyJSFile( concatenatedJSResource, minifiedJSResource );
-                    }
-                    catch ( IOException e )
-                    {
-                        throw new MojoExecutionException( "Problem reading/writing JS", e );
-                    }
+                        boolean warningsFound;
+                        try
+                        {
+                            warningsFound = minifyJSFile( concatenatedJSResource, minifiedJSResource );
+                        }
+                        catch ( IOException e )
+                        {
+                            throw new MojoExecutionException( "Problem reading/writing JS", e );
+                        }
 
-                    logCompressionRatio( minifiedJSResource.getName(), concatenatedJSResource.length(),
-                                         minifiedJSResource.length() );
+                        logCompressionRatio( minifiedJSResource.getName(), concatenatedJSResource.length(),
+                                             minifiedJSResource.length() );
 
-                    // Delete the concatenated file *only* if there were no warnings. If there were warnings then the
-                    // user may want to manually invoke the compressor for further investigation.
-                    if ( !warningsFound )
-                    {
-                        concatenatedJSResource.delete();
-                    }
-                    else
-                    {
-                        getLog().warn( "Warnings were found. " + concatenatedJSResource
-                                           + " has been retained for your further investigations." );
+                        // If there were warnings then the user may want to manually invoke the compressor for further
+                        // investigation.
+                        if ( warningsFound )
+                        {
+                            getLog().warn( "Warnings were found. " + concatenatedJSResource
+                                               + " is available for your further investigations." );
+                        }
                     }
                 }
 
                 // Update source references
-                replacer.replaceJSResources( targetHTML, minifiedJSResources );
+                replacer.replaceJSResources( destinationFolder, targetHTML, minifiedJSResources );
             }
             else
             {
-                replacer.replaceJSResources( targetHTML, concatenatedJsResources );
+                replacer.replaceJSResources( destinationFolder, targetHTML, concatenatedJsResources );
                 getLog().info( "Concatenated resources with no compression" );
             }
 
@@ -357,6 +396,9 @@ public class WebMinifierMojo
             }
 
         }
+
+        // Clean up the destination folder recursively where directories have nothing left in them.
+        removeEmptyFolders( destinationFolder );
     }
 
     /**
@@ -438,7 +480,7 @@ public class WebMinifierMojo
     /**
      * @return property
      */
-    public List<String> getJsSplitPoints()
+    public Properties getJsSplitPoints()
     {
         return jsSplitPoints;
     }
@@ -576,6 +618,27 @@ public class WebMinifierMojo
         return warningsFound;
     }
 
+    private void removeEmptyFolders( File folder )
+    {
+        File[] files = folder.listFiles();
+        boolean folderHasFile = false;
+        for ( File file : files )
+        {
+            if ( file.isDirectory() )
+            {
+                removeEmptyFolders( file );
+            }
+            else
+            {
+                folderHasFile = true;
+            }
+        }
+        if ( !folderHasFile )
+        {
+            folder.delete();
+        }
+    }
+
     /**
      * @param destinationFolder to set.
      */
@@ -619,7 +682,7 @@ public class WebMinifierMojo
     /**
      * @param jsSplitPoints to set.
      */
-    public void setJsSplitPoints( List<String> jsSplitPoints )
+    public void setJsSplitPoints( Properties jsSplitPoints )
     {
         this.jsSplitPoints = jsSplitPoints;
     }

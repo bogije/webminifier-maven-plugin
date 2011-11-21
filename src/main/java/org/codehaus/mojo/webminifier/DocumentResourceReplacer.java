@@ -38,6 +38,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.codehaus.plexus.util.StringUtils;
 import org.cyberneko.html.parsers.DOMParser;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -152,10 +153,11 @@ public class DocumentResourceReplacer
     /**
      * Replace the script statements that exist in the document with the new set.
      * 
+     * @param baseFolder the base folder to documents and js resources.
      * @param documentDir the folder that represents the root.
      * @param jsResources the new set.
      */
-    public void replaceJSResources( File documentDir, Set<File> jsResources )
+    public void replaceJSResources( File baseFolder, File documentDir, Set<File> jsResources )
     {
         // Get and remove all SCRIPT elements
         NodeList scriptNodes = document.getElementsByTagName( "script" );
@@ -166,21 +168,35 @@ public class DocumentResourceReplacer
             scriptNode.getParentNode().removeChild( scriptNode );
         }
 
+        // Determine the relationship path of the document to the base. This will then be pre-pended to all scripts
+        // required by the html as scripts as base dir relative.
+        URI baseFolderUri = baseFolder.toURI();
+        URI documentBaseRelUri = baseFolderUri.relativize( documentDir.toURI() );
+
+        StringBuilder sb = new StringBuilder();
+        int nestedFolderCount = StringUtils.countMatches( documentBaseRelUri.toString(), "/" );
+        for ( int i = 0; i < nestedFolderCount; ++i )
+        {
+            sb.append( "../" );
+        }
+        String docRelUri = sb.toString();
+
         // Note the head node to add to.
+
         NodeList headElements = document.getElementsByTagName( "head" );
         if ( headElements.getLength() == 1 )
         {
             Node headElement = headElements.item( 0 );
 
             // Insert new SCRIPT elements for all replaced resources
-            URI documentUri = documentDir.getParentFile().toURI();
             for ( File jsResource : jsResources )
             {
-                URI jsResourceRelUri = documentUri.relativize( jsResource.toURI() );
+                // jsResource file path needs to have its path made relative to the document.
+                URI jsResourceBaseRelUri = baseFolderUri.relativize( jsResource.toURI() );
 
                 Element jsElement = document.createElement( "script" );
                 jsElement.setAttribute( "type", "text/javascript" );
-                jsElement.setAttribute( "src", jsResourceRelUri.toString() );
+                jsElement.setAttribute( "src", docRelUri + jsResourceBaseRelUri.toString() );
                 headElement.appendChild( jsElement );
             }
         }

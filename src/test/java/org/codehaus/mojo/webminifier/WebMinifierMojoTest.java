@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -96,11 +97,46 @@ public class WebMinifierMojoTest
         Collection<File> files = FileUtils.listFiles( mojo.getDestinationFolder(), //
                                                       new String[] { "html", "js" }, true );
 
-        assertEquals( 3, files.size() );
+        assertEquals( 4, files.size() );
         for ( File file : files )
         {
             String fileName = file.getName();
-            if ( !fileName.equals( "1.min.js" ) && !fileName.equals( "a.html" ) && !fileName.equals( "d.js" ) )
+            if ( !fileName.equals( "1.js" ) && !fileName.equals( "1.min.js" ) && !fileName.equals( "a.html" )
+                && !fileName.equals( "d.js" ) )
+            {
+                fail( "Unexpected filename: " + fileName );
+            }
+        }
+    }
+
+    /**
+     * Take the MOJO for a split run.
+     * 
+     * @throws MojoFailureException if something goes wrong.
+     * @throws MojoExecutionException if something goes wrong.
+     */
+    @Test
+    public void testSplitRun()
+        throws MojoExecutionException, MojoFailureException
+    {
+        Properties jsSplitPoints = new Properties();
+        jsSplitPoints.put( "b.js", "renamed-b" );
+        jsSplitPoints.put( "c.js", "renamed-c" );
+        mojo.setJsSplitPoints( jsSplitPoints );
+
+        mojo.execute();
+
+        @SuppressWarnings( "unchecked" )
+        Collection<File> files = FileUtils.listFiles( mojo.getDestinationFolder(), //
+                                                      new String[] { "html", "js" }, true );
+
+        assertEquals( 6, files.size() );
+        for ( File file : files )
+        {
+            String fileName = file.getName();
+            if ( !fileName.equals( "renamed-b.js" ) && !fileName.equals( "renamed-b.min.js" )
+                && !fileName.equals( "renamed-c.js" ) && !fileName.equals( "renamed-c.min.js" ) //
+                && !fileName.equals( "a.html" ) && !fileName.equals( "d.js" ) )
             {
                 fail( "Unexpected filename: " + fileName );
             }

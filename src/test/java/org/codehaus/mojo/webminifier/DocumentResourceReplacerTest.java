@@ -89,7 +89,7 @@ public class DocumentResourceReplacerTest
         URL url = DocumentResourceReplacer.class.getResource( "d.js" );
         File js = new File( url.toURI() );
         jsResources.add( js );
-        replacer.replaceJSResources( html, jsResources );
+        replacer.replaceJSResources( html.getParentFile(), html, jsResources );
 
         List<File> jsFiles = replacer.findJSResources();
         assertEquals( 1, jsFiles.size() );
