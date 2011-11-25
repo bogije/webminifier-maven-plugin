@@ -101,7 +101,7 @@ public class WebMinifierMojoTest
         for ( File file : files )
         {
             String fileName = file.getName();
-            if ( !fileName.equals( "1.js" ) && !fileName.equals( "1.min.js" ) && !fileName.equals( "a.html" )
+            if ( !fileName.equals( "1.js" ) && !fileName.equals( "1-min.js" ) && !fileName.equals( "a.html" )
                 && !fileName.equals( "d.js" ) )
             {
                 fail( "Unexpected filename: " + fileName );
@@ -134,8 +134,8 @@ public class WebMinifierMojoTest
         for ( File file : files )
         {
             String fileName = file.getName();
-            if ( !fileName.equals( "renamed-b.js" ) && !fileName.equals( "renamed-b.min.js" )
-                && !fileName.equals( "renamed-c.js" ) && !fileName.equals( "renamed-c.min.js" ) //
+            if ( !fileName.equals( "renamed-b.js" ) && !fileName.equals( "renamed-b-min.js" )
+                && !fileName.equals( "renamed-c.js" ) && !fileName.equals( "renamed-c-min.js" ) //
                 && !fileName.equals( "a.html" ) && !fileName.equals( "d.js" ) )
             {
                 fail( "Unexpected filename: " + fileName );
