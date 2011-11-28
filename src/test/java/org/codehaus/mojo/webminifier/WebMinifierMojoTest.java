@@ -70,6 +70,8 @@ public class WebMinifierMojoTest
         mojo.setYuiLinebreak( -1 );
         mojo.setYuiMunge( true );
         mojo.setYuiPreserveSemi( false );
+        mojo.setProjectSourceFolder( sourceFolder );
+        mojo.setSplitDependencies( false );
     }
 
     /**

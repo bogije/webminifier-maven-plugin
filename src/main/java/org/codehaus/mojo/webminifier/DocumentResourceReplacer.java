@@ -29,7 +29,6 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -157,7 +156,7 @@ public class DocumentResourceReplacer
      * @param documentDir the folder that represents the root.
      * @param jsResources the new set.
      */
-    public void replaceJSResources( File baseFolder, File documentDir, Set<File> jsResources )
+    public void replaceJSResources( File baseFolder, File documentDir, List<File> jsResources )
     {
         // Get and remove all SCRIPT elements
         NodeList scriptNodes = document.getElementsByTagName( "script" );

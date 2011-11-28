@@ -25,9 +25,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.xml.transform.TransformerException;
 
@@ -85,7 +84,7 @@ public class DocumentResourceReplacerTest
     public void testReplaceJSResources()
         throws URISyntaxException
     {
-        Set<File> jsResources = new HashSet<File>( 1 );
+        List<File> jsResources = new ArrayList<File>( 1 );
         URL url = DocumentResourceReplacer.class.getResource( "d.js" );
         File js = new File( url.toURI() );
         jsResources.add( js );

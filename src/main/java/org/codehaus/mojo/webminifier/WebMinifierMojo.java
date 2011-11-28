@@ -29,8 +29,10 @@ import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -175,6 +177,23 @@ public class WebMinifierMojo
     private boolean closureAcceptConstKeyword;
 
     /**
+     * The project source folder.
+     * 
+     * @parameter default-value="${basedir}/src/main"
+     * @required
+     */
+    private File projectSourceFolder;
+
+    /**
+     * Signals whether or not dependencies should be minified into their own file. For applications, you may want to put
+     * everything in a single minified file, but for libraries you do not.
+     * 
+     * @parameter default-value=true
+     * @required
+     */
+    private boolean splitDependencies;
+
+    /**
      * Concatenate two files.
      * 
      * @param inputFile the file to concatenated.
@@ -266,30 +285,45 @@ public class WebMinifierMojo
             }
 
             File concatenatedJsResource = null;
+            boolean splittingDependencies = false;
 
             URI destinationFolderUri = destinationFolder.toURI();
 
             // Walk backwards through the script declarations and note what files will map to what split point.
-            Map<File, File> jsResourceTargetFiles = new HashMap<File, File>( jsResources.size() );
+            Map<File, File> jsResourceTargetFiles = new LinkedHashMap<File, File>( jsResources.size() );
             ListIterator<File> jsResourcesIter = jsResources.listIterator( jsResources.size() );
 
             while ( jsResourcesIter.hasPrevious() )
             {
                 File jsResource = jsResourcesIter.previous();
 
-                URI candidateSplitPointNameUri = destinationFolderUri.relativize( jsResource.toURI() );
-                String splitPointName = (String) jsSplitPoints.get( candidateSplitPointNameUri.toString() );
+                String candidateSplitPointNameUri = destinationFolderUri.relativize( jsResource.toURI() ).toString();
+                String splitPointName = (String) jsSplitPoints.get( candidateSplitPointNameUri );
+
+                // If we do not have a split point name and the resource is a dependency of this project i.e. it is not
+                // within our src/main folder then we give it a split name of "dependencies". Factoring out dependencies
+                // into their own split point is a useful thing to do and will always be required when building
+                // libraries.
+                if ( splitDependencies && splitPointName == null && !splittingDependencies )
+                {
+                    File sourceFile = new File( projectSourceFolder, candidateSplitPointNameUri );
+                    if ( !sourceFile.exists() )
+                    {
+                        splitPointName = Integer.valueOf( ++minifiedCounter ).toString();
+                        splittingDependencies = true;
+                    }
+                }
 
                 // If we have no name and we've not been in here before, then assign an initial name based on a number.
                 if ( splitPointName == null && concatenatedJsResource == null )
                 {
-                    concatenatedJsResource = new File( destinationFolder, //
-                                                       Integer.valueOf( ++minifiedCounter ) + ".js" );
+                    splitPointName = Integer.valueOf( ++minifiedCounter ).toString();
                 }
-                else if ( splitPointName != null )
+
+                // We have a new split name so use it for this file and upwards in the script statements until we
+                // either hit another split point or there are no more script statements.
+                if ( splitPointName != null )
                 {
-                    // We have a new split name so use it for this file and upwards in the script statements until we
-                    // either hit another split point or there are no more script statements.
                     concatenatedJsResource = new File( destinationFolder, splitPointName + ".js" );
 
                     // Note that we've previously created this.
@@ -323,20 +357,29 @@ public class WebMinifierMojo
                 }
             }
 
-            // Minify the concatenated JS resource files
+            // Reduce the list of js resource target files to a distinct set
+            LinkedHashSet<File> concatenatedJsResourcesSet = new LinkedHashSet<File>( jsResourceTargetFiles.values() );
+            File[] concatenatedJsResourcesArray = new File[concatenatedJsResourcesSet.size()];
+            concatenatedJsResourcesSet.toArray( concatenatedJsResourcesArray );
+            List<File> concatenatedJsResources = Arrays.asList( concatenatedJsResourcesArray );
 
-            Set<File> concatenatedJsResources = new HashSet<File>( jsResourceTargetFiles.values() );
+            // Minify the concatenated JS resource files
 
             if ( jsCompressorType != JsCompressorType.NONE )
             {
-                Set<File> minifiedJSResources = new LinkedHashSet<File>( concatenatedJsResources.size() );
-                for ( File concatenatedJSResource : concatenatedJsResources )
+                List<File> minifiedJSResources = new ArrayList<File>( concatenatedJsResources.size() );
+
+                ListIterator<File> concatenatedJsResourcesIter =
+                    concatenatedJsResources.listIterator( concatenatedJsResources.size() );
+                while ( concatenatedJsResourcesIter.hasPrevious() )
                 {
+                    concatenatedJsResource = concatenatedJsResourcesIter.previous();
+
                     File minifiedJSResource;
                     try
                     {
                         minifiedJSResource = FileUtils.toFile( //
-                        new URL( concatenatedJSResource.toURI().toString().replace( ".js", "-min.js" ) ) );
+                        new URL( concatenatedJsResource.toURI().toString().replace( ".js", "-min.js" ) ) );
                     }
                     catch ( MalformedURLException e )
                     {
@@ -352,21 +395,21 @@ public class WebMinifierMojo
                         boolean warningsFound;
                         try
                         {
-                            warningsFound = minifyJSFile( concatenatedJSResource, minifiedJSResource );
+                            warningsFound = minifyJSFile( concatenatedJsResource, minifiedJSResource );
                         }
                         catch ( IOException e )
                         {
                             throw new MojoExecutionException( "Problem reading/writing JS", e );
                         }
 
-                        logCompressionRatio( minifiedJSResource.getName(), concatenatedJSResource.length(),
+                        logCompressionRatio( minifiedJSResource.getName(), concatenatedJsResource.length(),
                                              minifiedJSResource.length() );
 
                         // If there were warnings then the user may want to manually invoke the compressor for further
                         // investigation.
                         if ( warningsFound )
                         {
-                            getLog().warn( "Warnings were found. " + concatenatedJSResource
+                            getLog().warn( "Warnings were found. " + concatenatedJsResource
                                                + " is available for your further investigations." );
                         }
                     }
@@ -498,6 +541,14 @@ public class WebMinifierMojo
     }
 
     /**
+     * @return property.
+     */
+    public File getProjectSourceFolder()
+    {
+        return projectSourceFolder;
+    }
+
+    /**
      * @return property
      */
     public File getSourceFolder()
@@ -511,6 +562,14 @@ public class WebMinifierMojo
     public int getYuiLinebreak()
     {
         return yuiLinebreak;
+    }
+
+    /**
+     * @return property.
+     */
+    public boolean isSplitDependencies()
+    {
+        return splitDependencies;
     }
 
     /**
@@ -688,11 +747,27 @@ public class WebMinifierMojo
     }
 
     /**
+     * @param projectSourceFolder set property.
+     */
+    public void setProjectSourceFolder( File projectSourceFolder )
+    {
+        this.projectSourceFolder = projectSourceFolder;
+    }
+
+    /**
      * @param sourceFolder to set.
      */
     public void setSourceFolder( File sourceFolder )
     {
         this.sourceFolder = sourceFolder;
+    }
+
+    /**
+     * @param splitDependencies Set the property.
+     */
+    public void setSplitDependencies( boolean splitDependencies )
+    {
+        this.splitDependencies = splitDependencies;
     }
 
     /**
