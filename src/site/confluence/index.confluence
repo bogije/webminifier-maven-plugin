@@ -1,76 +1,44 @@
-h1. Introduction
+h1. Web Minifier Maven Plugin
 
-h2. Why use Maven for Javascript ?
-Javascript is a... script language. It does not require compilation neither packaging to be released. However Javascript can benefit from tooling given that: tests should be run; Continuous Integration should be supported; dependency management;and packaging and deployment should be automated.
+!images/zip.png|align=left!
 
-Maven's goal of project comprehension stands for any language.
+*Increase the speed of your application download by up to 3 times*
 
-Javascript developers have created nice toolkits like QUnit and JsDocs to get a productive and controlled development environment. They also use libraries like jQuery for development, split code into fine grained scripts and use some assembly tools to create the released scripts.
+h2. Overview
 
-The Javascript Maven Tools project brings together tools from many places and greatly reduces the burden on you to develop your Javascript library or application.
+This plugin provides JavaScript and CSS minification for Maven projects. It produces a minified version of your JavaScript and CSS resources which can be used to construct a minified final artefact. It is designed to be flexible in the way it operates to allow for easy minified resource re-use across your project.
 
-h2. Project Definition
-Your project simply configures one extension in a pom file to enable javascript support:
+Under the hood, it currently uses the [YUI Compressor|http://developer.yahoo.com/yui/compressor/] and [Closure Compiler|http://code.google.com/closure/compiler/] but has a layer of abstraction around these tools which allows for other tools to be used.
 
-{code}
-<?xml version="1.0" encoding="UTF-8"?>
-<project 
-  xmlns="http://maven.apache.org/POM/4.0.0" 
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  
-  <modelVersion>4.0.0</modelVersion>
-  
-  <groupId>your groupid</groupId>
-  <artifactId>your artifact id</artifactId>
-  <version>your version</version>
-  <packaging>js</packaging>
-  
-  <name>Some name</name>
-  <description>A really nice description</description>
-  
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+h2. Default Behaviour
 
-  <build>
-    <extensions>
-      <extension>
-        <groupId>org.codehaus.mojo.javascript</groupId>
-        <artifactId>javascript-maven-plugin</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
-      </extension>
-    </extensions>
-  </build>
+The default behaviour of the plugin is like so:
+- Copy target/classes to /target/min/classes
+- For each HTML file in /target/min/classes
+-- Find all JavaScript script references
+-- Join all the referenced JavaScript files together into a new JavaScript file in the same order as the original references
+-- Minify the merged JavaScript file
+-- Replace the script references in the HTML file with a reference to the merged, minified script
+-- Find all CSS file references
+-- Join all the references CSS files together into a new CSS file in the same order as the original references
+-- Minify the merged CSS file
+-- Replace the CSS references in the HTML file with a reference to the merged, minified script
 
-</project>
-{code}
+h2. Minified Resource Grouping with Split Points
 
-Once you have your pom file then you can load your application into a web browser via http://localhost:8080/ using the following command:
+The plugin also supports more configurable behaviour; you can give it any number of JavaScript or CSS file names which are to be used as 'split points'; if a split point is reached when collating the list of resources within a HTML file then resources up to and including that point are merged into a single file, and a new merged file begins at the following resource, if it exists.
 
-{code}
-mvn jetty:run
-{code}
+For example, if a HTML file contains the following script references:
+- a.js
+- b.js
+- c.js
+- d.js
+- e.js
 
-h2. Conventions
-Maven Javascript Tools and associated plugins use the following conventions for directory structure. Conforming with this layout will keep your POM files as simple as possible.
+By default, these would all be merged into a new file 1.js and your HTML script references replaced by a single one, like:
+- 1.min.js (containing a.js, b.js, c.js, d.js and e.js)
 
-{noformat}
-  <project-root>/
-  |
-  +- pom.xml
-  |
-  +- src/
-  |  |
-  |  +- main/
-  |  |  |
-  |  |  +- js/ (source location for Scripts)
-  |  |  +- resources/ (source location for any static resources)
-  |  |
-  |  +- test/
-  |  |  |
-  |  |  +- js/ (source location for test scripts)
-  |  |  +- resources/ (source location for test resources)
-  |  |
-  ...
-{noformat}
+If you configured a JavaScript split point of 'c.js', the HTML file could then contain the following script references:
+- 1.min.js (containing a.js, b.js and c.js)
+- 2.min.js (containing d.js and e.js)
+
