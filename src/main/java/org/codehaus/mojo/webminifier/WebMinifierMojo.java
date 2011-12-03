@@ -116,7 +116,7 @@ public class WebMinifierMojo
     private Properties jsSplitPoints;
 
     /**
-     * All HTML, JavaScript and CSS files are assumed to have this encoding. Ê
+     * All HTML, JavaScript and CSS files are assumed to have this encoding. ï¿½
      * 
      * @parameter expression="${encoding}" default-value="${project.build.sourceEncoding}"
      */
@@ -285,16 +285,53 @@ public class WebMinifierMojo
             }
 
             File concatenatedJsResource = null;
-            boolean splittingDependencies = false;
 
             URI destinationFolderUri = destinationFolder.toURI();
+
+            // Split the js resources into two lists: one containing all external dependencies, the other containing
+            // project sources. We do this so that project sources can be minified without the dependencies (libraries
+            // generally don't need to distribute the dependencies).
+            int jsDependencyProjectResourcesIndex;
+
+            if ( splitDependencies )
+            {
+                List<File> jsDependencyResources = new ArrayList<File>( jsResources.size() );
+                List<File> jsProjectResources = new ArrayList<File>( jsResources.size() );
+                for ( File jsResource : jsResources )
+                {
+                    String jsResourceUri = destinationFolderUri.relativize( jsResource.toURI() ).toString();
+                    File jsResourceFile = new File( projectSourceFolder, jsResourceUri );
+                    if ( jsResourceFile.exists() )
+                    {
+                        jsProjectResources.add( jsResource );
+                    }
+                    else
+                    {
+                        jsDependencyResources.add( jsResource );
+                    }
+                }
+
+                // Re-constitute the js resource list from dependency resources + project resources and note the index
+                // in the list that represents the start of project sources in the list. We need this information later.
+                jsDependencyProjectResourcesIndex = jsDependencyResources.size();
+
+                jsResources = jsDependencyResources;
+                jsResources.addAll( jsProjectResources );
+            }
+            else
+            {
+                jsDependencyProjectResourcesIndex = 0;
+            }
 
             // Walk backwards through the script declarations and note what files will map to what split point.
             Map<File, File> jsResourceTargetFiles = new LinkedHashMap<File, File>( jsResources.size() );
             ListIterator<File> jsResourcesIter = jsResources.listIterator( jsResources.size() );
 
+            boolean splittingDependencies = false;
+
             while ( jsResourcesIter.hasPrevious() )
             {
+                int jsResourceIterIndex = jsResourcesIter.previousIndex();
                 File jsResource = jsResourcesIter.previous();
 
                 String candidateSplitPointNameUri = destinationFolderUri.relativize( jsResource.toURI() ).toString();
@@ -306,8 +343,7 @@ public class WebMinifierMojo
                 // libraries.
                 if ( splitDependencies && splitPointName == null && !splittingDependencies )
                 {
-                    File sourceFile = new File( projectSourceFolder, candidateSplitPointNameUri );
-                    if ( !sourceFile.exists() )
+                    if ( jsResourceIterIndex < jsDependencyProjectResourcesIndex )
                     {
                         splitPointName = Integer.valueOf( ++minifiedCounter ).toString();
                         splittingDependencies = true;
