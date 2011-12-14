@@ -6,7 +6,7 @@ h1. Web Minifier Maven Plugin
 
 h2. Overview
 
-This plugin provides JavaScript and CSS minification for Maven projects. It produces a minified version of your JavaScript and CSS resources which can be used to construct a minified final artefact. It is designed to be flexible in the way it operates to allow for easy minified resource re-use across your project.
+This plugin provides JavaScript minification for Maven projects. It produces a minified version of your JavaScript resources which can be used to construct a minified final artefact. It is designed to be flexible in the way it operates to allow for easy minified resource re-use across your project.
 
 Under the hood, it currently uses the [YUI Compressor|http://developer.yahoo.com/yui/compressor/] and [Closure Compiler|http://code.google.com/closure/compiler/] but has a layer of abstraction around these tools which allows for other tools to be used.
 
@@ -19,14 +19,10 @@ The default behaviour of the plugin is like so:
 -- Join all the referenced JavaScript files together into a new JavaScript file in the same order as the original references
 -- Minify the merged JavaScript file
 -- Replace the script references in the HTML file with a reference to the merged, minified script
--- Find all CSS file references
--- Join all the references CSS files together into a new CSS file in the same order as the original references
--- Minify the merged CSS file
--- Replace the CSS references in the HTML file with a reference to the merged, minified script
 
 h2. Minified Resource Grouping with Split Points
 
-The plugin also supports more configurable behaviour; you can give it any number of JavaScript or CSS file names which are to be used as 'split points'; if a split point is reached when collating the list of resources within a HTML file then resources up to and including that point are merged into a single file, and a new merged file begins at the following resource, if it exists.
+The plugin also supports more configurable behaviour; you can give it any number of JavaScript file names which are to be used as 'split points'; if a split point is reached when collating the list of resources within a HTML file then resources up to and including that point are merged into a single file, and a new merged file begins at the following resource, if it exists.
 
 For example, if a HTML file contains the following script references:
 - a.js

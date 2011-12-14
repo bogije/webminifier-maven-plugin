@@ -2,7 +2,7 @@ h1. Usage
 
 h2. Binding goals
 
-The common method of usage is to simply declare the plugin and its goals. Associate the {{minify-js}} and {{minify-css}} goals with the (bound by default) {{prepare-package}} phase to have the plugin invoked, like so:
+The common method of usage is to simply declare the plugin and its goals. Associate the {{minify-js}} goal with the (bound by default) {{prepare-package}} phase to have the plugin invoked, like so:
 
 {code}
 <project>
@@ -17,7 +17,6 @@ The common method of usage is to simply declare the plugin and its goals. Associ
           <execution>
             <goals>
               <goal>minify-js</goal>
-              <goal>minify-css</goal>
             </goals>
           </execution>
         </executions>
@@ -42,7 +41,12 @@ Configuration options can be passed to the plugin using a {{configuration}} sect
         ...
         <configuration>
           <jsCompressorType>YUI</jsCompressorType>
-          <jsSplitPoints>framework.js</jsSplitPoints>
+          <jsSplitPoints>
+            <property>
+              <name>js/framework.js</name>
+              <value>myframeworkfilename</value>
+            </property>
+          </jsSplitPoints>
           <yuiJSObfuscate>false</yuiJSObfuscate>
         </configuration>
       </plugin>
@@ -63,12 +67,16 @@ Given the following plugin configuration:
           <execution>
             <goals>
               <goal>minify-js</goal>
-              <goal>minify-css</goal>
             </goals>
           </execution>
         </executions>
         <configuration>
-          <jsSplitPoints>framework.js</jsSplitPoints>
+          <jsSplitPoints>
+            <property>
+              <name>js/framework.js</name>
+              <value>myframeworkfilename</value>
+            </property>
+          </jsSplitPoints>
         </configuration>
       </plugin>
     ...
@@ -76,43 +84,36 @@ Given the following plugin configuration:
 
 And the following directory structure before minifcation:
 - app.html
-- utilities.js
-- framework.js
-- ui.js
-- application.js
-- framework.css
-- ui.css
-- application.css
+- js/utilities.js
+- js/framework.js
+- js/ui.js
+- js/application.js
 
 With the following references in the file target/min/classes/app.html:
 
 {code}
-	...
-	<script type="text/javascript" src="utilities.js"></script>
-	<script type="text/javascript" src="framework.js"></script>
-	<script type="text/javascript" src="ui.js"></script>
-	<script type="text/javascript" src="application.js"></script>
-	...
-	<link rel="stylesheet" type="text/css" href="framework.css" />
-	<link rel="stylesheet" type="text/css" href="ui.css" />
-	<link rel="stylesheet" type="text/css" href="application.css" />
-	...
+    ...
+    <script type="text/javascript" src="js/utilities.js"></script>
+    <script type="text/javascript" src="js/framework.js"></script>
+    <script type="text/javascript" src="js/ui.js"></script>
+    <script type="text/javascript" src="js/application.js"></script>
+    ...
 {code}
 
 You'd see the following files in target/min/classes after minification:
 
 - app.html
-- 1.min.js (containing utilities.js and framework.js)
-- 2.min.js (containing ui.js and application.js)
-- 1.min.css (containing framework.css, ui.css and application.css)
+- myframeworkfilename.js & myframeworkfilename.min.js (containing utilities.js and framework.js)
+- 1.js & 1.min.js (containing ui.js and application.js)
 
 And the references in target/min/classes/app.html would be re-written like:
 
 {code}
-	...
-	<script type="text/javascript" src="1.min.js"></script>
-	<script type="text/javascript" src="2.min.js"></script>
-	...
-	<link rel="stylesheet" type="text/css" href="1.css" />
-	...
+    ...
+    <script type="text/javascript" src="myframeworkfilename.min.js"></script>
+    <script type="text/javascript" src="1.min.js"></script>
+    ...
 {code}
+
+What has happened here is that the minifier found "framework.js" in the list and minified this and everything above it (utilities.js) and then named the resulting file "myframeworkfilename" as instructed.
+The 1.min.js file is named so given that the configuration did not specify an alternate name for application.js. Numbers are therefore used in this context.
