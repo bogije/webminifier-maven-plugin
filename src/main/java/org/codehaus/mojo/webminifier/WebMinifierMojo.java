@@ -414,8 +414,18 @@ public class WebMinifierMojo
                     File minifiedJSResource;
                     try
                     {
-                        minifiedJSResource = FileUtils.toFile( //
-                        new URL( concatenatedJsResource.toURI().toString().replace( ".js", "-min.js" ) ) );
+                        String uri = concatenatedJsResource.toURI().toString();
+                        int i = uri.lastIndexOf( ".js" );
+                        String minUri;
+                        if ( i > -1 )
+                        {
+                            minUri = uri.substring( 0, i ) + "-min.js";
+                        }
+                        else
+                        {
+                            minUri = uri;
+                        }
+                        minifiedJSResource = FileUtils.toFile( new URL( minUri ) );
                     }
                     catch ( MalformedURLException e )
                     {
