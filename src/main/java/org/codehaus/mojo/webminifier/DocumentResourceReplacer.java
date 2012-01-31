@@ -70,7 +70,7 @@ public class DocumentResourceReplacer
     {
         parser = new DOMParser();
 
-        parser.parse( htmlFile.toString() );
+        parser.parse( htmlFile.toURI().toURL().toString() );
         documentParentFile = htmlFile.getParentFile();
         document = parser.getDocument();
     }
