@@ -257,6 +257,7 @@ public class WebMinifierMojo
         // minification can be expensive, we would like to avoid performing it multiple times. Thus storing
         // a set of what we've previously minified enables us.
         Set<File> existingConcatenatedJsResources = new HashSet<File>();
+        Set<File> consumedJsResources = new HashSet<File>();
 
         for ( String targetHTMLFile : getArrayOfTargetHTMLFiles() )
         {
@@ -389,7 +390,7 @@ public class WebMinifierMojo
 
                     // Finally, remove the JS resource from the target folder as it is no longer required (we've
                     // concatenated it).
-                    jsResource.delete();
+                    consumedJsResources.add( jsResource );
                 }
             }
 
@@ -486,7 +487,11 @@ public class WebMinifierMojo
 
         }
 
-        // Clean up the destination folder recursively where directories have nothing left in them.
+        // Clean up including the destination folder recursively where directories have nothing left in them.
+        for ( File consumedJsResource : consumedJsResources )
+        {
+            consumedJsResource.delete();
+        }
         removeEmptyFolders( destinationFolder );
     }
 
