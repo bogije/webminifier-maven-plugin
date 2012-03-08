@@ -58,7 +58,7 @@ public class ClosureJsCompressorTest
     public void setUp()
         throws UnsupportedEncodingException
     {
-        source = new ByteArrayInputStream( "this.a = 1;".getBytes( "UTF-8" ) );
+        source = new ByteArrayInputStream( "this.a = 1;alert(this.a);".getBytes( "UTF-8" ) );
         target = new ByteArrayOutputStream();
         String encoding = "UTF-8";
         logger = mock( Log.class );
@@ -82,7 +82,7 @@ public class ClosureJsCompressorTest
 
         verify( logger, times( 0 ) ).error( (CharSequence) any() );
         verify( logger, times( 0 ) ).warn( (CharSequence) any() );
-        assertEquals( "this.a=1;", target.toString() );
+        assertEquals( "this.a=1;alert(this.a);", target.toString() );
     }
 
     /**
@@ -103,6 +103,6 @@ public class ClosureJsCompressorTest
         verify( logger, times( 0 ) ).error( (CharSequence) any() );
         verify( logger, times( 1 ) )//
         .warn( "JSC_USED_GLOBAL_THIS. dangerous use of the global this object at input line 1 : 0" );
-        assertEquals( "this.a=1;", target.toString() );
+        assertEquals( "this.a=1;alert(this.a);", target.toString() );
     }
 }

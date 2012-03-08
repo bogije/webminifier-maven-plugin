@@ -23,6 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.logging.Level;
 
 import org.apache.maven.plugin.logging.Log;
@@ -34,8 +38,8 @@ import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.CompilerOptions;
 import com.google.javascript.jscomp.DiagnosticGroups;
 import com.google.javascript.jscomp.JSError;
-import com.google.javascript.jscomp.JSSourceFile;
 import com.google.javascript.jscomp.Result;
+import com.google.javascript.jscomp.SourceFile;
 
 /**
  * Provide a compressor around Google's Closure Compiler. TODO: Write unit tests.
@@ -75,7 +79,9 @@ public class ClosureJsCompressor
         com.google.javascript.jscomp.Compiler.setLoggingLevel( Level.OFF );
         com.google.javascript.jscomp.Compiler compiler = new com.google.javascript.jscomp.Compiler();
 
-        JSSourceFile sourceFile = JSSourceFile.fromInputStream( "input", source );
+        SourceFile sourceFile = SourceFile.builder()//
+        .withCharset( Charset.forName( encoding ) )//
+        .buildFromInputStream( "input", source );
 
         CompilerOptions options = new CompilerOptions();
         compilationLevel.setOptionsForCompilationLevel( options );
@@ -86,7 +92,9 @@ public class ClosureJsCompressor
         options.setWarningLevel( DiagnosticGroups.NON_STANDARD_JSDOC, CheckLevel.OFF );
 
         // Compile
-        Result result = compiler.compile( new JSSourceFile[0], new JSSourceFile[] { sourceFile }, options );
+        List<SourceFile> externs = Collections.emptyList();
+        List<SourceFile> inputs = Arrays.asList( new SourceFile[] { sourceFile } );
+        Result result = compiler.compile( externs, inputs, options );
 
         // Report the outcomes.
         exceptionState = new ExceptionState();
