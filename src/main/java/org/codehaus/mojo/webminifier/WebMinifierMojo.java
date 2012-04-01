@@ -467,7 +467,17 @@ public class WebMinifierMojo
             }
             else
             {
-                replacer.replaceJSResources( destinationFolder, targetHTML, concatenatedJsResources );
+                List<File> unminifiedJSResources = new ArrayList<File>( concatenatedJsResources.size() );
+
+                ListIterator<File> concatenatedJsResourcesIter =
+                    concatenatedJsResources.listIterator( concatenatedJsResources.size() );
+                while ( concatenatedJsResourcesIter.hasPrevious() )
+                {
+                    concatenatedJsResource = concatenatedJsResourcesIter.previous();
+                    unminifiedJSResources.add( concatenatedJsResource );
+                }
+
+                replacer.replaceJSResources( destinationFolder, targetHTML, unminifiedJSResources );
                 getLog().info( "Concatenated resources with no compression" );
             }
 
