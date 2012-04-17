@@ -348,7 +348,6 @@ public class WebMinifierMojo
                     if ( jsResourceIterIndex < jsDependencyProjectResourcesIndex )
                     {
                         splitPointName = Integer.valueOf( ++minifiedCounter ).toString();
-                        splittingDependencies = true;
                     }
                 }
 
@@ -369,6 +368,8 @@ public class WebMinifierMojo
                     {
                         existingConcatenatedJsResources.add( concatenatedJsResource );
                     }
+
+                    splittingDependencies = true;
                 }
 
                 jsResourceTargetFiles.put( jsResource, concatenatedJsResource );
