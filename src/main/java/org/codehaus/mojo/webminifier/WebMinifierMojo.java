@@ -214,6 +214,7 @@ public class WebMinifierMojo
                     getLog().debug( "Concatenating file: " + inputFile );
                 }
                 IOUtils.copy( is, os );
+                os.write( ';' );
                 os.write( '\n' );
             }
             finally
