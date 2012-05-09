@@ -90,7 +90,7 @@ public class DocumentResourceReplacer
             if ( scriptAttrNodes != null )
             {
                 Attr srcAttrNode = (Attr) scriptAttrNodes.getNamedItem( "src" );
-                if ( srcAttrNode != null )
+                if ( isJSType( scriptAttrNodes ) && srcAttrNode != null )
                 {
                     String jsSrc = srcAttrNode.getValue();
                     // If it has a SRC which can be resolved
@@ -104,6 +104,12 @@ public class DocumentResourceReplacer
         }
 
         return jsResources;
+    }
+
+    private boolean isJSType( NamedNodeMap scriptAttrNodes )
+    {
+        Attr typeAttrNode = (Attr) scriptAttrNodes.getNamedItem( "type" );
+        return ( typeAttrNode != null && typeAttrNode.getValue().equals( "text/javascript" ) );
     }
 
     /**
@@ -158,12 +164,21 @@ public class DocumentResourceReplacer
      */
     public void replaceJSResources( File baseFolder, File documentDir, List<File> jsResources )
     {
-        // Get and remove all SCRIPT elements
+        // Get and remove all JS script elements
         NodeList scriptNodes = document.getElementsByTagName( "script" );
-        while ( scriptNodes.getLength() > 0 )
+        List<Node> scriptNodesToRemove = new ArrayList<Node>( scriptNodes.getLength() );
+        for ( int i = 0; i < scriptNodes.getLength(); ++i )
         {
             // Remove existing script nodes
-            Node scriptNode = scriptNodes.item( 0 );
+            Node scriptNode = scriptNodes.item( i );
+            NamedNodeMap scriptAttrNodes = scriptNode.getAttributes();
+            if ( scriptAttrNodes != null && isJSType( scriptAttrNodes ) )
+            {
+                scriptNodesToRemove.add( scriptNode );
+            }
+        }
+        for ( Node scriptNode : scriptNodesToRemove )
+        {
             scriptNode.getParentNode().removeChild( scriptNode );
         }
 
