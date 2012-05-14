@@ -109,7 +109,7 @@ public class DocumentResourceReplacer
     private boolean isJSType( NamedNodeMap scriptAttrNodes )
     {
         Attr typeAttrNode = (Attr) scriptAttrNodes.getNamedItem( "type" );
-        return ( typeAttrNode != null && typeAttrNode.getValue().equals( "text/javascript" ) );
+        return ( typeAttrNode == null || typeAttrNode.getValue().equals( "text/javascript" ) );
     }
 
     /**
