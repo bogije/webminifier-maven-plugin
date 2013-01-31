@@ -95,7 +95,7 @@
 		<dependency>
 			<groupId>com.google.javascript</groupId>
 			<artifactId>closure-compiler</artifactId>
-			<version>r1810</version>
+			<version>r2180</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
